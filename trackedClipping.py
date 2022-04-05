@@ -2,12 +2,12 @@ from PySide2.QtCore import QTimer
 from PySide2.QtGui import QVector3D
     
 class xrClippingTools:
-    # Clipping tools for Tracker devices
+    # Clipping tools for Tracker devices - see vrClippingModule for more functions
     
     def __init__(self):
         self.timer = QTimer()
         self.invertClipDirection = False
-        self.clipAxis('6DoF')
+        self.setAxis('6DoF')
         
         # Get the first tracker device
         self.tracker = vrDeviceService.getVRDevice("tracker-1")
@@ -58,31 +58,41 @@ class xrClippingTools:
         setClippingPlane(Pnt3f(matrix[3], matrix[7], matrix[11]),
                          Vec3f(matrix[2], matrix[6], matrix[10]), self.invertClipDirection)
 
-    def clipX(self):            
+    def clipX(self):    
         matrix = self.clipPlaneGeo.getWorldTransform()
         setClippingPlane(Pnt3f(matrix[3], matrix[7], matrix[11]),
                          Vec3f(1, 0, 0), self.invertClipDirection)
 
-    def clipY(self):            
+    def clipY(self): 
         matrix = self.clipPlaneGeo.getWorldTransform()
         setClippingPlane(Pnt3f(matrix[3], matrix[7], matrix[11]),
                          Vec3f(0, 1, 0), self.invertClipDirection)
                          
-    def clipZ(self):            
+    def clipZ(self): 
         matrix = self.clipPlaneGeo.getWorldTransform()
         setClippingPlane(Pnt3f(matrix[3], matrix[7], matrix[11]),
                          Vec3f(0, 0, 1), self.invertClipDirection)
-                         
-    def clipAxis(self, axis):
+    
+    def clipClone(self):
+        cloneClippingContour()
+                 
+    def setAxis(self, axis):
         if (axis == '6DoF'):
+            # Set color to Yellow
+            setClippingContourVisualization(True, Vec3f(0.5, 0.5, 0), 1)
             self.timer.timeout.connect(self.clip6DoF)
         elif (axis == 'X'):
+            # Set color to Red
+            setClippingContourVisualization(True, Vec3f(1, 0, 0), 1)
             self.timer.timeout.connect(self.clipX)
         elif (axis == 'Y'):
+            # Set color to Green
+            setClippingContourVisualization(True, Vec3f(0, 1, 0), 1)
             self.timer.timeout.connect(self.clipY)
         elif (axis == 'Z'):
+            # Set color to Blue
+            setClippingContourVisualization(True, Vec3f(0, 0, 1), 1)
             self.timer.timeout.connect(self.clipZ)
-
 
 enableClippingPlane(True)
 xrclip = xrClippingTools()
