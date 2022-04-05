@@ -1,5 +1,4 @@
 from PySide2.QtCore import QTimer
-from PySide2.QtGui import QVector3D
     
 class xrClippingTools:
     # Clipping tools for Tracker devices - see vrClippingModule for more functions
