@@ -1,12 +1,13 @@
 from PySide2.QtCore import QTimer
     
 class xrClippingTools:
-    # Clipping tools for Tracker devices - see vrClippingModule for more functions
+    # Clipping tools for Tracker devices, see vrClippingModule for more functions
     
     def __init__(self):
         self.timer = QTimer()
+        self.clip_mode = '6DoF'
         self.invertClipDirection = False
-        self.setAxis('6DoF')
+        self.timer.timeout.connect(self.update_clip)
         
         # Get the first tracker device
         self.tracker = vrDeviceService.getVRDevice("tracker-1")
@@ -28,7 +29,22 @@ class xrClippingTools:
         self.trackerConstraint = vrConstraintService.createParentConstraint(
             [self.tracker.getNode()], self.trackerTransform, False)
         
+        annotations = vrAnnotationService.getAnnotations()
+        
+        if not annotations:
+            # List is empty
+            self.annotation = vrAnnotationService.createAnnotation("clipping_coordinates")
+        else:
+            self.annotation = vrAnnotationService.findAnnotation("clipping_coordinates")
+        if not self.annotation:
+            self.annotation = vrAnnotationService.createAnnotation("clipping_coordinates")
+    
         vrLogInfo('xrClippingTools activated.')
+        
+    def getClippingCoordinates(self):
+        clip_coords = vrClippingModule.getClippingPlanePosition()
+        vrLogInfo(clip_coords)
+        return clip_coords
     
     def __del__(self):
         vrLogInfo('Destructor called, deleting constraint.')
@@ -50,48 +66,43 @@ class xrClippingTools:
     def clipStop(self):
         self.timer.stop()
         vrLogInfo('Clip update stopped.')
-        
-    def clip6DoF(self):            
-        # Get World Transform of the geometry plane
-        matrix = self.clipPlaneGeo.getWorldTransform()
-        setClippingPlane(Pnt3f(matrix[3], matrix[7], matrix[11]),
-                         Vec3f(matrix[2], matrix[6], matrix[10]), self.invertClipDirection)
-
-    def clipX(self):    
-        matrix = self.clipPlaneGeo.getWorldTransform()
-        setClippingPlane(Pnt3f(matrix[3], matrix[7], matrix[11]),
-                         Vec3f(1, 0, 0), self.invertClipDirection)
-
-    def clipY(self): 
-        matrix = self.clipPlaneGeo.getWorldTransform()
-        setClippingPlane(Pnt3f(matrix[3], matrix[7], matrix[11]),
-                         Vec3f(0, 1, 0), self.invertClipDirection)
-                         
-    def clipZ(self): 
-        matrix = self.clipPlaneGeo.getWorldTransform()
-        setClippingPlane(Pnt3f(matrix[3], matrix[7], matrix[11]),
-                         Vec3f(0, 0, 1), self.invertClipDirection)
     
-    def clipClone(self):
-        cloneClippingContour()
+    def update_clip(self):
+        matrix = self.clipPlaneGeo.getWorldTransform()
+        matrix_xyz = Pnt3f(matrix[3], matrix[7], matrix[11])
+        
+        x_coord = str(round(matrix[3], 1))
+        y_coord = str(round(matrix[7], 1))
+        z_coord = str(round(matrix[11], 1))
+        
+        self.annotation.setPosition(QVector3D(matrix[3], matrix[7], matrix[11]))
+
+        if self.clip_mode == 'X':
+            clip_normal = Vec3f(1, 0, 0)
+            self.annotation.setText('X: ' + x_coord)
+        elif self.clip_mode == 'Y':
+            clip_normal = Vec3f(0, 1, 0)
+            self.annotation.setText('Y: ' + y_coord)
+        elif self.clip_mode == 'Z':
+            clip_normal = Vec3f(0, 0, 1)
+            self.annotation.setText('Z: ' + z_coord)
+        else:
+            clip_normal = Vec3f(matrix[2], matrix[6], matrix[10])
+            self.annotation.setText('X: ' + x_coord + '\n' + 'Y: ' + y_coord + '\n' + 'Z: ' + z_coord)
+
+        setClippingPlane(matrix_xyz, clip_normal, self.invertClipDirection)
                  
     def setAxis(self, axis):
-        if (axis == '6DoF'):
-            # Set color to Yellow
-            setClippingContourVisualization(True, Vec3f(0.5, 0.5, 0), 1)
-            self.timer.timeout.connect(self.clip6DoF)
-        elif (axis == 'X'):
-            # Set color to Red
-            setClippingContourVisualization(True, Vec3f(1, 0, 0), 1)
-            self.timer.timeout.connect(self.clipX)
+        self.clip_mode = axis
+        
+        if (axis == 'X'):
+            setClippingContourVisualization(True, Vec3f(1, 0, 0), 1) # Set color to Red
         elif (axis == 'Y'):
-            # Set color to Green
-            setClippingContourVisualization(True, Vec3f(0, 1, 0), 1)
-            self.timer.timeout.connect(self.clipY)
+            setClippingContourVisualization(True, Vec3f(0, 1, 0), 1) # Set color to Green
         elif (axis == 'Z'):
-            # Set color to Blue
-            setClippingContourVisualization(True, Vec3f(0, 0, 1), 1)
-            self.timer.timeout.connect(self.clipZ)
+            setClippingContourVisualization(True, Vec3f(0, 0, 1), 1) # Set color to Blue
+        else:
+            setClippingContourVisualization(True, Vec3f(0.5, 0.5, 0), 1) # Set color to Yellow
 
 enableClippingPlane(True)
 xrclip = xrClippingTools()
